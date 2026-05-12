@@ -1,0 +1,300 @@
+@import "tailwindcss";
+
+:root {
+  color: #102033;
+  background: #f6fbff;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #f6fbff;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid #22d3ee;
+  outline-offset: 3px;
+}
+
+.app-bg {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  background:
+    linear-gradient(120deg, rgba(14, 165, 233, 0.08), transparent 38%),
+    linear-gradient(240deg, rgba(16, 185, 129, 0.08), transparent 42%),
+    #f6fbff;
+}
+
+.app-bg::before,
+.ambient-bg::before {
+  position: fixed;
+  inset: -20%;
+  z-index: -2;
+  content: "";
+  background:
+    linear-gradient(115deg, transparent 10%, rgba(34, 211, 238, 0.18) 30%, transparent 48%),
+    linear-gradient(245deg, transparent 20%, rgba(52, 211, 153, 0.16) 46%, transparent 68%),
+    linear-gradient(20deg, rgba(99, 102, 241, 0.08), transparent 42%);
+  filter: blur(18px);
+  animation: drift-field 18s ease-in-out infinite alternate;
+}
+
+.app-bg::after,
+.ambient-bg::after {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(14, 116, 144, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 116, 144, 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 82%);
+  animation: grid-slide 22s linear infinite;
+}
+
+.ambient-bg {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  background:
+    linear-gradient(120deg, rgba(14, 165, 233, 0.1), transparent 36%),
+    linear-gradient(245deg, rgba(45, 212, 191, 0.12), transparent 44%),
+    #f7fcff;
+}
+
+.glass {
+  border: 1px solid rgba(14, 116, 144, 0.16);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(22px);
+}
+
+.leaflet-container {
+  min-height: 280px;
+  width: 100%;
+  border-radius: 0.75rem;
+  background: #0f172a;
+}
+
+@media (min-width: 640px) {
+  .leaflet-container {
+    min-height: 420px;
+  }
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+.app-bg header {
+  border-color: rgba(14, 116, 144, 0.14) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  box-shadow: 0 12px 38px rgba(15, 23, 42, 0.08);
+}
+
+.app-bg main,
+.ambient-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-bg .bg-slate-950,
+.ambient-bg .bg-slate-950 {
+  background-color: #f8fbff !important;
+}
+
+.app-bg .bg-slate-950\/70,
+.app-bg .bg-slate-950\/75,
+.ambient-bg .bg-slate-950\/70,
+.ambient-bg .bg-slate-950\/75 {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.app-bg .bg-slate-800,
+.app-bg .hover\:bg-slate-800:hover,
+.ambient-bg .bg-slate-800,
+.ambient-bg .hover\:bg-slate-800:hover {
+  background-color: rgba(226, 246, 255, 0.9) !important;
+}
+
+.app-bg .bg-slate-700,
+.app-bg .hover\:bg-slate-700:hover,
+.ambient-bg .bg-slate-700,
+.ambient-bg .hover\:bg-slate-700:hover {
+  background-color: rgba(202, 238, 249, 0.95) !important;
+}
+
+.app-bg .border-slate-800,
+.app-bg .border-slate-700,
+.app-bg .border-slate-600,
+.ambient-bg .border-slate-800,
+.ambient-bg .border-slate-700,
+.ambient-bg .border-slate-600 {
+  border-color: rgba(14, 116, 144, 0.18) !important;
+}
+
+.app-bg .text-white,
+.app-bg .text-slate-50,
+.app-bg .text-slate-100,
+.app-bg .text-slate-200,
+.app-bg .text-slate-300,
+.ambient-bg .text-white,
+.ambient-bg .text-slate-50,
+.ambient-bg .text-slate-100,
+.ambient-bg .text-slate-200,
+.ambient-bg .text-slate-300 {
+  color: #102033 !important;
+}
+
+.app-bg .text-slate-400,
+.ambient-bg .text-slate-400 {
+  color: #5b7188 !important;
+}
+
+.app-bg .text-cyan-200,
+.ambient-bg .text-cyan-200,
+.ambient-bg .text-cyan-100 {
+  color: #087c8f !important;
+}
+
+.app-bg .bg-cyan-300,
+.ambient-bg .bg-cyan-300 {
+  background: linear-gradient(135deg, #67e8f9, #a7f3d0) !important;
+  color: #082f49 !important;
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.22);
+}
+
+.app-bg .hover\:bg-cyan-200:hover,
+.ambient-bg .hover\:bg-cyan-200:hover {
+  background: linear-gradient(135deg, #a5f3fc, #bbf7d0) !important;
+}
+
+.app-bg input,
+.app-bg textarea,
+.ambient-bg input,
+.ambient-bg textarea {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #102033 !important;
+  border-color: rgba(14, 116, 144, 0.2) !important;
+}
+
+.app-bg input::placeholder,
+.ambient-bg input::placeholder {
+  color: #6b7f94 !important;
+}
+
+.app-bg .bg-red-950,
+.app-bg .bg-red-600,
+.app-bg .hover\:bg-red-500:hover {
+  color: #fff !important;
+}
+
+.app-bg .bg-red-950,
+.app-bg .bg-red-950 .text-white,
+.app-bg .bg-red-950 .text-red-50 {
+  color: #fff !important;
+}
+
+.app-bg .bg-red-600.text-white,
+.app-bg .bg-red-600 {
+  background-color: #dc2626 !important;
+  color: #fff !important;
+}
+
+@keyframes drift-field {
+  0% {
+    transform: translate3d(-2%, -1%, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translate3d(3%, 2%, 0) rotate(4deg) scale(1.04);
+  }
+}
+
+@keyframes grid-slide {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 42px 42px, 42px 42px;
+  }
+}
+
+/* ── Mobile responsiveness ──────────────────────────────── */
+
+/* Touch-friendly buttons */
+button, a[role="button"], .touch-target {
+  min-height: 44px;
+}
+
+/* Mobile mic floating bar */
+.mobile-mic-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(14, 116, 144, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+}
+
+/* Safe area padding for bottom bar content */
+.has-mobile-bar {
+  padding-bottom: 100px;
+}
+
+@media (min-width: 1024px) {
+  .has-mobile-bar {
+    padding-bottom: 0;
+  }
+}
+
+/* Reduce heavy animations on mobile for battery/perf */
+@media (max-width: 640px) {
+  .app-bg::before,
+  .ambient-bg::before {
+    animation: none;
+  }
+  .app-bg::after,
+  .ambient-bg::after {
+    animation: none;
+    background-size: 32px 32px;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  .app-bg header {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}

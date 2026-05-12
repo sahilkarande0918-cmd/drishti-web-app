@@ -1,0 +1,89 @@
+import { useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Eye, FileText, Loader2 } from 'lucide-react'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import ImageCapture from '../components/ImageCapture'
+import PageHeader from '../components/PageHeader'
+import { describeScene, readVisibleText } from '../services/geminiClient'
+import { useToast } from '../contexts/ToastContext'
+import { useVoice } from '../contexts/VoiceContext'
+
+export default function VisionPage() {
+  const [params] = useSearchParams()
+  const initialMode = params.get('mode') === 'text' ? 'text' : 'scene'
+  const [mode, setMode] = useState(initialMode)
+  const [imageFile, setImageFile] = useState(null)
+  const [result, setResult] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { notify } = useToast()
+  const { speak, setOrbState } = useVoice()
+
+  const runVision = useCallback(async (nextMode = mode) => {
+    setLoading(true)
+    setOrbState('processing')
+    try {
+      const response = nextMode === 'scene' ? await describeScene(imageFile) : await readVisibleText(imageFile)
+      setResult(response.text)
+      speak(response.text)
+      notify('Grok AI response generated.', 'success')
+    } catch (error) {
+      notify(error.message || 'AI vision failed.', 'error')
+      speak(error.message || 'AI vision failed.')
+    } finally {
+      setLoading(false)
+      setOrbState('idle')
+    }
+  }, [imageFile, mode, notify, setOrbState, speak])
+
+  useEffect(() => {
+    function handleVisionCommand(event) {
+      const nextMode = event.detail?.mode || mode
+      setMode(nextMode)
+      runVision(nextMode)
+    }
+
+    window.addEventListener('drishti:vision-command', handleVisionCommand)
+    return () => window.removeEventListener('drishti:vision-command', handleVisionCommand)
+  }, [mode, runVision])
+
+  return (
+    <div>
+      <PageHeader
+        eyebrow="AI Vision"
+        title="Describe scenes and read signs"
+        description="Upload an image or capture from webcam. Drishti will explain the scene or read visible text aloud."
+      />
+
+      <div className="grid gap-4 sm:gap-6 xl:grid-cols-[1.05fr_.95fr]">
+        <Card>
+          <ImageCapture imageFile={imageFile} setImageFile={setImageFile} />
+        </Card>
+        <Card>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button type="button" variant={mode === 'scene' ? 'primary' : 'secondary'} onClick={() => setMode('scene')}>
+              <Eye className="h-5 w-5" aria-hidden="true" />
+              Scene
+            </Button>
+            <Button type="button" variant={mode === 'text' ? 'primary' : 'secondary'} onClick={() => setMode('text')}>
+              <FileText className="h-5 w-5" aria-hidden="true" />
+              Text Reader
+            </Button>
+          </div>
+
+          <Button type="button" className="mt-4 w-full sm:mt-5" onClick={() => runVision()} disabled={loading || !imageFile}>
+            {loading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
+            {mode === 'scene' ? 'Describe Scene' : 'Read Text'}
+          </Button>
+
+          <div className="mt-4 min-h-40 rounded-lg border border-slate-700 bg-slate-950/75 p-4 sm:mt-6 sm:min-h-64 sm:p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200 sm:text-sm">AI response</p>
+            <p className="mt-3 text-base font-semibold leading-7 text-white sm:mt-4 sm:text-xl sm:leading-9">
+              {result || 'The spoken result will appear here after analysis.'}
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
