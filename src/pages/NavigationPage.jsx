@@ -64,109 +64,8 @@ export default function NavigationPage() {
   const { notify } = useToast()
   const { speak, setOrbState } = useVoice()
 
-  // Get initial position
-  useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-    getCurrentPosition()
-      .then((coords) => setPosition(coords))
-      .catch(() => notify('Using demo Pune location.', 'info'))
-  }, [notify])
-
-  // Listen for guide-me event from voice context
-  useEffect(() => {
-    function handleGuideMe(e) {
-      const dest = e.detail?.destination
-      if (dest) {
-        setDestinationText(dest)
-        // Auto-start route + live nav
-        buildRouteAndGo(dest)
-      }
-    }
-    window.addEventListener('drishti:guide-me', handleGuideMe)
-    return () => window.removeEventListener('drishti:guide-me', handleGuideMe)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [position])
-
-  // Cleanup watch on unmount
-  useEffect(() => {
-    return () => {
-      if (watchIdRef.current != null) stopWatching(watchIdRef.current)
-      window.speechSynthesis?.cancel()
-    }
-  }, [])
-
-  /* ── build route and optionally start live nav ──────────── */
-  const buildRouteAndGo = useCallback(async (destText) => {
-    setLoading(true)
-    setOrbState('processing')
-    try {
-      const currentPos = await getCurrentPosition().catch(() => position)
-      setPosition(currentPos)
-      const target = await searchDestination(destText || destinationText, currentPos)
-      const routeData = await getWalkingRoute(currentPos, target)
-
-      setDestination(target)
-      setRoute(routeData.coordinates)
-      setSteps(routeData.steps)
-      stepsRef.current = routeData.steps
-      currentStepRef.current = 0
-      setCurrentStepIndex(0)
-      announcedRef.current = new Set()
-      arrivedRef.current = false
-      setArrived(false)
-
-      const km = (routeData.distance / 1000).toFixed(1)
-      const minutes = Math.max(1, Math.round(routeData.duration / 60))
-      const firstStep = routeData.steps[0]?.instruction || 'Walk straight ahead.'
-
-      speakNav(`Route ready. ${km} kilometers, about ${minutes} minutes. ${firstStep}`)
-      notify('Route generated. Starting live navigation.', 'success')
-
-      // Auto-start live nav
-      startLiveNavigation()
-    } catch (error) {
-      notify(error.message || 'Unable to create route.', 'error')
-      speakNav(error.message || 'Unable to create route.')
-    } finally {
-      setLoading(false)
-      setOrbState('idle')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destinationText, notify, position, setOrbState])
-
-  /* ── start live GPS tracking + guidance ─────────────────── */
-  const startLiveNavigation = useCallback(() => {
-    if (watchIdRef.current != null) stopWatching(watchIdRef.current)
-    setIsLiveNav(true)
-
-    const wid = watchPosition(
-      (pos) => {
-        setLivePosition(pos)
-        processLivePosition(pos)
-      },
-      (err) => {
-        notify('GPS error: ' + (err.message || 'Location unavailable'), 'error')
-      },
-    )
-    watchIdRef.current = wid
-    speakNav('Live navigation started. I will guide you at every turn.')
-  }, [notify])
-
-  /* ── stop live navigation ───────────────────────────────── */
-  const stopLiveNavigation = useCallback(() => {
-    if (watchIdRef.current != null) {
-      stopWatching(watchIdRef.current)
-      watchIdRef.current = null
-    }
-    setIsLiveNav(false)
-    setLivePosition(null)
-    speakNav('Navigation stopped.')
-    notify('Live navigation stopped.', 'info')
-  }, [notify])
-
   /* ── process each GPS update ────────────────────────────── */
-  function processLivePosition(pos) {
+  const processLivePosition = useCallback((pos) => {
     const allSteps = stepsRef.current
     if (!allSteps.length || arrivedRef.current) return
 
@@ -221,16 +120,78 @@ export default function NavigationPage() {
         }
       }
     }
-  }
+  }, [])
 
-  /* ── regular route build (form submit) ──────────────────── */
-  async function buildRoute(event) {
-    event.preventDefault()
-    await buildRouteAndGo()
-  }
+  /* ── start live GPS tracking + guidance ─────────────────── */
+  const startLiveNavigation = useCallback(() => {
+    if (watchIdRef.current != null) stopWatching(watchIdRef.current)
+    setIsLiveNav(true)
+
+    const wid = watchPosition(
+      (pos) => {
+        setLivePosition(pos)
+        processLivePosition(pos)
+      },
+      (err) => {
+        notify('GPS error: ' + (err.message || 'Location unavailable'), 'error')
+      },
+    )
+    watchIdRef.current = wid
+    speakNav('Live navigation started. I will guide you at every turn.')
+  }, [notify, processLivePosition])
+
+  /* ── stop live navigation ───────────────────────────────── */
+  const stopLiveNavigation = useCallback(() => {
+    if (watchIdRef.current != null) {
+      stopWatching(watchIdRef.current)
+      watchIdRef.current = null
+    }
+    setIsLiveNav(false)
+    setLivePosition(null)
+    speakNav('Navigation stopped.')
+    notify('Live navigation stopped.', 'info')
+  }, [notify])
+
+  /* ── build route and optionally start live nav ──────────── */
+  const buildRouteAndGo = useCallback(async (destText) => {
+    setLoading(true)
+    setOrbState('processing')
+    try {
+      const currentPos = await getCurrentPosition().catch(() => position)
+      setPosition(currentPos)
+      const target = await searchDestination(destText || destinationText, currentPos)
+      const routeData = await getWalkingRoute(currentPos, target)
+
+      setDestination(target)
+      setRoute(routeData.coordinates)
+      setSteps(routeData.steps)
+      stepsRef.current = routeData.steps
+      currentStepRef.current = 0
+      setCurrentStepIndex(0)
+      announcedRef.current = new Set()
+      arrivedRef.current = false
+      setArrived(false)
+
+      const km = (routeData.distance / 1000).toFixed(1)
+      const minutes = Math.max(1, Math.round(routeData.duration / 60))
+      const firstStep = routeData.steps[0]?.instruction || 'Walk straight ahead.'
+
+      speakNav(`Route ready. ${km} kilometers, about ${minutes} minutes. ${firstStep}`)
+      notify('Route generated. Starting live navigation.', 'success')
+
+      // Auto-start live nav
+      startLiveNavigation()
+    } catch (error) {
+      notify(error.message || 'Unable to create route.', 'error')
+      speakNav(error.message || 'Unable to create route.')
+    } finally {
+      setLoading(false)
+      setOrbState('idle')
+    }
+  }, [destinationText, notify, position, setOrbState, startLiveNavigation])
 
   /* ── where am I ─────────────────────────────────────────── */
-  async function whereAmI() {
+  const whereAmI = useCallback(async () => {
     setLoading(true)
     setOrbState('processing')
     try {
@@ -245,7 +206,44 @@ export default function NavigationPage() {
       setLoading(false)
       setOrbState('idle')
     }
-  }
+  }, [notify, setOrbState, speak])
+
+  /* ── regular route build (form submit) ──────────────────── */
+  const buildRoute = useCallback(async (event) => {
+    event?.preventDefault()
+    await buildRouteAndGo()
+  }, [buildRouteAndGo])
+
+  // Get initial position
+  useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+    getCurrentPosition()
+      .then((coords) => setPosition(coords))
+      .catch(() => notify('Using demo Pune location.', 'info'))
+  }, [notify])
+
+  // Listen for guide-me event from voice context
+  useEffect(() => {
+    function handleGuideMe(e) {
+      const dest = e.detail?.destination
+      if (dest) {
+        setDestinationText(dest)
+        // Auto-start route + live nav
+        buildRouteAndGo(dest)
+      }
+    }
+    window.addEventListener('drishti:guide-me', handleGuideMe)
+    return () => window.removeEventListener('drishti:guide-me', handleGuideMe)
+  }, [position, buildRouteAndGo])
+
+  // Cleanup watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current != null) stopWatching(watchIdRef.current)
+      window.speechSynthesis?.cancel()
+    }
+  }, [])
 
   const activeStep = steps[currentStepIndex]
   const nextStep = steps[currentStepIndex + 1]

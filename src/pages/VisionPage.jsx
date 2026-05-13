@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Eye, FileText, Loader2 } from 'lucide-react'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -16,23 +16,26 @@ export default function VisionPage() {
   const [imageFile, setImageFile] = useState(null)
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
+  const autoAnalyzeRef = useRef(false)
   const { notify } = useToast()
   const { speak, setOrbState } = useVoice()
 
-  const runVision = useCallback(async (nextMode = mode) => {
+  const runVision = useCallback(async (nextMode = mode, file = imageFile) => {
+    if (!file) return
     setLoading(true)
     setOrbState('processing')
     try {
-      const response = nextMode === 'scene' ? await describeScene(imageFile) : await readVisibleText(imageFile)
+      const response = nextMode === 'scene' ? await describeScene(file) : await readVisibleText(file)
       setResult(response.text)
       speak(response.text)
-      notify('Grok AI response generated.', 'success')
+      notify('AI response generated.', 'success')
     } catch (error) {
       notify(error.message || 'AI vision failed.', 'error')
       speak(error.message || 'AI vision failed.')
     } finally {
       setLoading(false)
       setOrbState('idle')
+      autoAnalyzeRef.current = false
     }
   }, [imageFile, mode, notify, setOrbState, speak])
 
@@ -43,9 +46,36 @@ export default function VisionPage() {
       runVision(nextMode)
     }
 
+    async function handleAnalyzeSurrounding() {
+      setMode('scene')
+      setResult('Initializing camera...')
+      autoAnalyzeRef.current = true
+      
+      // 1. Open camera
+      window.dispatchEvent(new CustomEvent('drishti:camera-command', { detail: { action: 'open' } }))
+      
+      // 2. Wait for camera to warm up
+      await new Promise(r => setTimeout(r, 2500))
+      
+      setResult('Capturing surroundings...')
+      // 3. Capture frame
+      window.dispatchEvent(new CustomEvent('drishti:camera-command', { detail: { action: 'capture' } }))
+    }
+
     window.addEventListener('drishti:vision-command', handleVisionCommand)
-    return () => window.removeEventListener('drishti:vision-command', handleVisionCommand)
+    window.addEventListener('drishti:analyze-surrounding', handleAnalyzeSurrounding)
+    return () => {
+      window.removeEventListener('drishti:vision-command', handleVisionCommand)
+      window.removeEventListener('drishti:analyze-surrounding', handleAnalyzeSurrounding)
+    }
   }, [mode, runVision])
+
+  // Auto-run vision when imageFile is updated via analyze-surrounding
+  useEffect(() => {
+    if (imageFile && autoAnalyzeRef.current && !loading) {
+      runVision('scene', imageFile)
+    }
+  }, [imageFile, loading, runVision])
 
   return (
     <div>

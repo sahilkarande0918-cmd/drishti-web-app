@@ -23,6 +23,7 @@ function normalizeCommand(text, pendingEmail) {
   if (n.includes('guide me') || n.includes('guide me to') || n.includes('take me to') || n.includes('navigate to') || n.includes('directions to')) return 'guide_me'
   if (n.includes('stop navigation') || n.includes('stop guiding')) return 'stop_navigation'
   if (n.includes('navigate') || n.includes('navigation')) return 'navigate'
+  if (n.includes('analyze surrounding') || n.includes('describe surrounding') || n.includes('what is in front of me')) return 'analyze_surrounding'
   if (n.includes('describe')) return 'describe'
   if (n.includes('read text') || n.includes('read sign')) return 'read'
   if (n.includes('help')) return 'help'
@@ -95,6 +96,7 @@ export function VoiceProvider({ children }) {
   const [lastAnswer, setLastAnswer] = useState('')
   const [pendingEmail, setPendingEmail] = useState(false)
   const [conversationLog, setConversationLog] = useState([])
+  const startListeningInternalRef = useRef(null)
 
   /* ── load female voice on mount ─────────────────────────── */
   useEffect(() => {
@@ -130,7 +132,7 @@ export function VoiceProvider({ children }) {
         if (autoRestartRef.current) {
           window.setTimeout(() => {
             if (autoRestartRef.current && !recognitionRef.current) {
-              startListeningInternal()
+              startListeningInternalRef.current?.()
             }
           }, 300)
         }
@@ -138,7 +140,6 @@ export function VoiceProvider({ children }) {
       utterance.onerror = () => { isSpeakingRef.current = false }
       window.speechSynthesis.speak(utterance)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [settings.speech_rate, settings.voice_enabled, pushLog],
   )
 
@@ -217,6 +218,12 @@ export function VoiceProvider({ children }) {
       window.setTimeout(() => {
         window.dispatchEvent(new CustomEvent('drishti:vision-command', { detail: { mode: 'scene' } }))
       }, 350)
+    } else if (action === 'analyze_surrounding') {
+      navigate('/vision?mode=scene')
+      speak(actionPlan.spokenResponse || 'Analyzing your surroundings now. Please hold your device steady.')
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('drishti:analyze-surrounding'))
+      }, 500)
     } else if (action === 'read_text') {
       navigate('/vision?mode=text')
       window.setTimeout(() => {
@@ -301,6 +308,12 @@ export function VoiceProvider({ children }) {
         speak('AI vision opened. Capture or upload a scene, then say describe this scene.')
         navigate('/vision?mode=scene')
         window.dispatchEvent(new CustomEvent('drishti:vision-command', { detail: { mode: 'scene' } }))
+      } else if (command === 'analyze_surrounding') {
+        speak('Analyzing your surroundings now. Please hold your device steady.')
+        navigate('/vision?mode=scene')
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('drishti:analyze-surrounding'))
+        }, 500)
       } else if (command === 'read') {
         speak('Text reader opened. Capture or upload an image, then say read this text.')
         navigate('/vision?mode=text')
@@ -375,7 +388,7 @@ export function VoiceProvider({ children }) {
       // 'no-speech' and 'aborted' are not real errors — auto-restart
       if (event.error === 'no-speech' || event.error === 'aborted') {
         if (autoRestartRef.current) {
-          window.setTimeout(() => startListeningInternal(), 500)
+          window.setTimeout(() => startListeningInternalRef.current?.(), 500)
         } else {
           setOrbState('idle')
         }
@@ -393,7 +406,7 @@ export function VoiceProvider({ children }) {
       if (autoRestartRef.current && orbState !== 'processing') {
         window.setTimeout(() => {
           if (autoRestartRef.current && !recognitionRef.current && !isSpeakingRef.current) {
-            startListeningInternal()
+            startListeningInternalRef.current?.()
           }
         }, 600)
       } else if (orbState === 'listening') {
@@ -402,8 +415,11 @@ export function VoiceProvider({ children }) {
     }
 
     recognition.start()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleCommand, notify, speak])
+  }, [handleCommand, notify, speak, orbState])
+
+  useEffect(() => {
+    startListeningInternalRef.current = startListeningInternal
+  }, [startListeningInternal])
 
   /* ── public: start listening (enables auto-restart loop) ── */
   const startListening = useCallback(() => {

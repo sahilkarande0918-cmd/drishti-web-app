@@ -52,6 +52,6 @@ export async function sendGuardianEmail(profile, message, options = {}) {
     return { email: { ...savedEmail, status: 'sent' }, mode: 'emailjs' }
   } catch (error) {
     console.error('[Drishti] EmailJS send failed:', error)
-    throw new Error(`Email delivery failed: ${error?.text || error?.message || 'Unknown error'}. The message was saved locally.`)
+    throw new Error(`Email delivery failed: ${error?.text || error?.message || 'Unknown error'}. The message was saved locally.`, { cause: error })
   }
 }

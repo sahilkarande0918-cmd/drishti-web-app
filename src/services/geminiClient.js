@@ -118,6 +118,7 @@ Available actions:
 - open_camera: open webcam on AI vision page
 - close_camera: close/stop the webcam camera
 - capture_photo: capture current webcam frame
+- analyze_surrounding: automatically open camera, capture, and describe what is in front of the user (people, obstacles, etc.)
 - describe_scene: run scene description
 - read_text: run text/sign reader
 - open_navigation: open navigation page
@@ -133,6 +134,7 @@ Available actions:
 Rules:
 - If user says SOS, emergency, help me, or urgent danger, choose sos.
 - If user says stop camera, close camera, or turn off camera, choose close_camera.
+- If user says "analyze surroundings", "what is in front of me", "describe my surroundings", or "check surrounding", choose analyze_surrounding.
 - If user says "guide me to [place]", "take me to [place]", "navigate to [place]", or "directions to [place]", choose guide_me and extract the destination.
 - If user says "stop navigation" or "stop guiding", choose stop_navigation.
 - If user says email/message/mail my guardian but gives no message, choose email_guardian_start.
