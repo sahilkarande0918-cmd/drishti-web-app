@@ -5,7 +5,7 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import ImageCapture from '../components/ImageCapture'
 import PageHeader from '../components/PageHeader'
-import { describeScene, readVisibleText } from '../services/geminiClient'
+import { describeScene, readVisibleText, describeSurroundingsMulti } from '../services/geminiClient'
 import { useToast } from '../contexts/ToastContext'
 import { useVoice } from '../contexts/VoiceContext'
 
@@ -17,8 +17,16 @@ export default function VisionPage() {
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
   const autoAnalyzeRef = useRef(false)
+  const capturedFilesRef = useRef([])
   const { notify } = useToast()
   const { speak, setOrbState } = useVoice()
+
+  const handleSetImageFile = useCallback((file) => {
+    setImageFile(file)
+    if (autoAnalyzeRef.current && file) {
+      capturedFilesRef.current.push(file)
+    }
+  }, [])
 
   const runVision = useCallback(async (nextMode = mode, file = imageFile) => {
     if (!file) return
@@ -50,16 +58,42 @@ export default function VisionPage() {
       setMode('scene')
       setResult('Initializing camera...')
       autoAnalyzeRef.current = true
+      capturedFilesRef.current = []
       
       // 1. Open camera
       window.dispatchEvent(new CustomEvent('drishti:camera-command', { detail: { action: 'open' } }))
       
       // 2. Wait for camera to warm up
-      await new Promise(r => setTimeout(r, 2500))
+      await new Promise(r => setTimeout(r, 2200))
       
-      setResult('Capturing surroundings...')
-      // 3. Capture frame
-      window.dispatchEvent(new CustomEvent('drishti:camera-command', { detail: { action: 'capture' } }))
+      speak('Starting 8 second scan. Please move your device slowly to capture the surroundings.')
+      setResult('Scanning surroundings...')
+
+      // 3. Capture multiple frames over ~8 seconds
+      for (let i = 0; i < 4; i++) {
+        window.dispatchEvent(new CustomEvent('drishti:camera-command', { detail: { action: 'capture' } }))
+        await new Promise(r => setTimeout(r, 2000))
+      }
+      
+      // 4. Run multi-image analysis
+      setLoading(true)
+      setOrbState('processing')
+      setResult('Analyzing full scan...')
+      speak('Scan complete. Analyzing your surroundings now.')
+      
+      try {
+        const response = await describeSurroundingsMulti(capturedFilesRef.current)
+        setResult(response.text)
+        speak(response.text)
+        notify('Multi-scan analysis complete.', 'success')
+      } catch (error) {
+        notify(error.message || 'Multi-scan analysis failed.', 'error')
+        speak(error.message || 'I could not analyze the full scan.')
+      } finally {
+        setLoading(false)
+        setOrbState('idle')
+        autoAnalyzeRef.current = false
+      }
     }
 
     window.addEventListener('drishti:vision-command', handleVisionCommand)
@@ -68,14 +102,8 @@ export default function VisionPage() {
       window.removeEventListener('drishti:vision-command', handleVisionCommand)
       window.removeEventListener('drishti:analyze-surrounding', handleAnalyzeSurrounding)
     }
-  }, [mode, runVision])
+  }, [mode, notify, runVision, speak, setOrbState])
 
-  // Auto-run vision when imageFile is updated via analyze-surrounding
-  useEffect(() => {
-    if (imageFile && autoAnalyzeRef.current && !loading) {
-      runVision('scene', imageFile)
-    }
-  }, [imageFile, loading, runVision])
 
   return (
     <div>
@@ -87,7 +115,7 @@ export default function VisionPage() {
 
       <div className="grid gap-4 sm:gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <Card>
-          <ImageCapture imageFile={imageFile} setImageFile={setImageFile} />
+          <ImageCapture imageFile={imageFile} setImageFile={handleSetImageFile} />
         </Card>
         <Card>
           <div className="grid gap-3 sm:grid-cols-2">

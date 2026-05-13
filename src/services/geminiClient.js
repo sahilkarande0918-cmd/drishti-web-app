@@ -81,6 +81,39 @@ export function describeScene(file) {
   )
 }
 
+export async function describeSurroundingsMulti(files) {
+  if (!files || !files.length) {
+    throw new Error('No images captured for analysis.')
+  }
+
+  const contents = await Promise.all(
+    files.map(async (file) => {
+      const dataUrl = await fileToDataUrl(file)
+      return {
+        type: 'image_url',
+        image_url: { url: dataUrl, detail: 'low' },
+      }
+    }),
+  )
+
+  contents.push({
+    type: 'text',
+    text: 'You are an accessibility assistant for a blind user. These images were captured sequentially as the user moved their camera to scan the surroundings. Synthesize these views into one clear, smart description of what is in front of and around them. Focus on people, obstacles, path clarity, and hazards. Keep response under 85 words.',
+  })
+
+  const text = await generateXaiChat(
+    [
+      {
+        role: 'user',
+        content: contents,
+      },
+    ],
+    xaiVisionModel,
+  )
+
+  return { text: text || sceneFallback, mode: 'grok' }
+}
+
 export function readVisibleText(file) {
   return generateVisionResponse(
     file,
