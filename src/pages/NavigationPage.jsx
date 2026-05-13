@@ -41,6 +41,7 @@ function speakNav(text) {
 export default function NavigationPage() {
   const [params] = useSearchParams()
   const [position, setPosition] = useState(getFallbackPosition())
+  const [isFallback, setIsFallback] = useState(true)
   const [livePosition, setLivePosition] = useState(null)
   const [destinationText, setDestinationText] = useState(
     params.get('destination') === 'college' ? 'MIT Academy of Engineering Pune' : ''
@@ -157,8 +158,10 @@ export default function NavigationPage() {
     setLoading(true)
     setOrbState('processing')
     try {
-      const currentPos = await getCurrentPosition().catch(() => position)
+      speakNav('Detecting your current location. Please make sure GPS is enabled.')
+      const currentPos = await getCurrentPosition()
       setPosition(currentPos)
+      setIsFallback(false)
       const target = await searchDestination(destText || destinationText, currentPos)
       const routeData = await getWalkingRoute(currentPos, target)
 
@@ -188,7 +191,7 @@ export default function NavigationPage() {
       setLoading(false)
       setOrbState('idle')
     }
-  }, [destinationText, notify, position, setOrbState, startLiveNavigation])
+  }, [destinationText, notify, setOrbState, startLiveNavigation])
 
   /* ── where am I ─────────────────────────────────────────── */
   const whereAmI = useCallback(async () => {
@@ -197,6 +200,7 @@ export default function NavigationPage() {
     try {
       const coords = await getCurrentPosition()
       setPosition(coords)
+      setIsFallback(false)
       const address = await reverseGeocode(coords)
       speak(`You are currently near ${address}.`)
     } catch (error) {
@@ -219,8 +223,15 @@ export default function NavigationPage() {
     if (initializedRef.current) return
     initializedRef.current = true
     getCurrentPosition()
-      .then((coords) => setPosition(coords))
-      .catch(() => notify('Using demo Pune location.', 'info'))
+      .then((coords) => {
+        setPosition(coords)
+        setIsFallback(false)
+        notify('Current location detected.', 'success')
+      })
+      .catch((err) => {
+        console.warn('Location detection failed, using fallback:', err)
+        notify('Using demo location. Please enable GPS for real navigation.', 'info')
+      })
   }, [notify])
 
   // Listen for guide-me event from voice context
@@ -235,7 +246,7 @@ export default function NavigationPage() {
     }
     window.addEventListener('drishti:guide-me', handleGuideMe)
     return () => window.removeEventListener('drishti:guide-me', handleGuideMe)
-  }, [position, buildRouteAndGo])
+  }, [buildRouteAndGo])
 
   // Cleanup watch on unmount
   useEffect(() => {
@@ -262,6 +273,7 @@ export default function NavigationPage() {
         <Card>
           <MapView
             position={position}
+            isFallback={isFallback}
             livePosition={livePosition}
             destination={destination}
             route={route}

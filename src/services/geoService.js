@@ -19,7 +19,7 @@ export function getCurrentPosition() {
         })
       },
       () => reject(new Error('Location permission was denied. Enable browser location access to use this feature.')),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
     )
   })
 }

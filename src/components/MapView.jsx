@@ -63,13 +63,19 @@ function Recenter({ center, route, isLive }) {
   return null
 }
 
-export default function MapView({ position, livePosition, destination, route, isLive, turnPoints }) {
+export default function MapView({ position, isFallback, livePosition, destination, route, isLive, turnPoints }) {
   const center = isLive && livePosition
     ? [livePosition.latitude, livePosition.longitude]
     : [position.latitude, position.longitude]
 
   return (
-    <MapContainer center={center} zoom={isLive ? 17 : 15} scrollWheelZoom className="min-h-[420px]">
+    <div className="relative">
+      {isFallback && !isLive && (
+        <div className="absolute top-4 left-1/2 z-[1000] -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-500 px-4 py-1.5 text-xs font-bold text-white shadow-lg">
+          ⚠️ Using fallback location. Enable GPS for accuracy.
+        </div>
+      )}
+      <MapContainer center={center} zoom={isLive ? 17 : 15} scrollWheelZoom className="min-h-[420px] rounded-xl overflow-hidden border border-slate-700">
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -101,5 +107,6 @@ export default function MapView({ position, livePosition, destination, route, is
       {/* Route line */}
       {route?.length > 0 && <Polyline positions={route} color="#22d3ee" weight={6} opacity={0.88} />}
     </MapContainer>
+    </div>
   )
 }
