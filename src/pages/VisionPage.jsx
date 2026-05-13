@@ -57,6 +57,7 @@ export default function VisionPage() {
     async function handleAnalyzeSurrounding() {
       setMode('scene')
       setResult('Initializing camera...')
+      setOrbState('processing')
       autoAnalyzeRef.current = true
       capturedFilesRef.current = []
       

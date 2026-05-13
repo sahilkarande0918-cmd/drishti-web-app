@@ -97,6 +97,11 @@ export function VoiceProvider({ children }) {
   const [pendingEmail, setPendingEmail] = useState(false)
   const [conversationLog, setConversationLog] = useState([])
   const startListeningInternalRef = useRef(null)
+  const orbStateRef = useRef(orbState)
+
+  useEffect(() => {
+    orbStateRef.current = orbState
+  }, [orbState])
 
   /* ── load female voice on mount ─────────────────────────── */
   useEffect(() => {
@@ -339,7 +344,9 @@ export function VoiceProvider({ children }) {
           speak('I could not reach the AI assistant. Please try again.')
         }
       }
-      if (command !== 'emergency') setOrbState('idle')
+      if (command !== 'emergency' && orbStateRef.current === 'processing') {
+        setOrbState('idle')
+      }
     },
     [executeAction, navigate, pendingEmail, profile, pushLog, speak, stopSpeaking, triggerEmergency],
   )
@@ -403,19 +410,19 @@ export function VoiceProvider({ children }) {
       setIsListening(false)
       recognitionRef.current = null
       // Auto-restart if flag is set and we're not currently processing
-      if (autoRestartRef.current && orbState !== 'processing') {
+      if (autoRestartRef.current && orbStateRef.current !== 'processing') {
         window.setTimeout(() => {
           if (autoRestartRef.current && !recognitionRef.current && !isSpeakingRef.current) {
             startListeningInternalRef.current?.()
           }
         }, 600)
-      } else if (orbState === 'listening') {
+      } else if (orbStateRef.current === 'listening') {
         setOrbState('idle')
       }
     }
 
     recognition.start()
-  }, [handleCommand, notify, speak, orbState])
+  }, [handleCommand, notify, speak])
 
   useEffect(() => {
     startListeningInternalRef.current = startListeningInternal
