@@ -22,9 +22,10 @@ export default function VisionPage() {
   const { speak, setOrbState } = useVoice()
 
   const handleSetImageFile = useCallback((file) => {
-    setImageFile(file)
     if (autoAnalyzeRef.current && file) {
       capturedFilesRef.current.push(file)
+    } else {
+      setImageFile(file)
     }
   }, [])
 
@@ -77,6 +78,11 @@ export default function VisionPage() {
       }
       
       // 4. Run multi-image analysis
+      window.dispatchEvent(new CustomEvent('drishti:camera-command', { detail: { action: 'close' } }))
+      if (capturedFilesRef.current.length > 0) {
+        setImageFile(capturedFilesRef.current[capturedFilesRef.current.length - 1])
+      }
+      
       setLoading(true)
       setOrbState('processing')
       setResult('Analyzing full scan...')
